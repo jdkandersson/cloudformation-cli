@@ -6,7 +6,6 @@ from tempfile import TemporaryFile
 from uuid import uuid4
 
 from botocore.exceptions import ClientError, WaiterError
-from botocore.waiter import WaiterModel, create_waiter_with_client
 from jinja2 import Environment, PackageLoader, select_autoescape
 from jsonschema import Draft6Validator
 from jsonschema.exceptions import ValidationError
@@ -34,14 +33,16 @@ TYPE_NAME_REGEX = "^[a-zA-Z0-9]{2,64}::[a-zA-Z0-9]{2,64}::[a-zA-Z0-9]{2,64}$"
 LAMBDA_RUNTIMES = {
     "noexec",  # cannot be executed, schema only
     "java8",
+    "java11",
     "go1.x",
     # python2.7 is EOL soon (2020-01-01)
     "python3.6",
     "python3.7",
-    # dotnetcore1.0 is EOL soon (2019-06-27)
+    "python3.8",
     "dotnetcore2.1",
-    # nodejs8.10 is EOL soon (2019-12-??)
+    # nodejs8.10 is EOL soon (2019-12-31)
     "nodejs10.x",
+    "nodejs12.x",
 }
 
 SETTINGS_VALIDATOR = Draft6Validator(
@@ -297,6 +298,7 @@ class Project:  # pylint: disable=too-many-instance-attributes
     ):  # pylint: disable=too-many-arguments, too-many-locals
         LOG.debug("Packaging complete, uploading...")
         session = create_sdk_session(region_name)
+        LOG.debug("Uploading to region '%s'", session.region_name)
         cfn_client = session.client("cloudformation", endpoint_url=endpoint_url)
         s3_client = session.client("s3")
         uploader = Uploader(cfn_client, s3_client)
@@ -336,37 +338,7 @@ class Project:  # pylint: disable=too-many-instance-attributes
 
     @staticmethod
     def _wait_for_registration(cfn_client, registration_token, set_default):
-        # temporarily creating waiter inline
-        # until the SDK releases and we can use get_waiter
-        waiter_config = {
-            "version": 2,
-            "waiters": {
-                "TypeRegistrationComplete": {
-                    "delay": 5,
-                    "operation": "DescribeTypeRegistration",
-                    "maxAttempts": 200,
-                    "description": "Wait until type registration is COMPLETE.",
-                    "acceptors": [
-                        {
-                            "argument": "ProgressStatus",
-                            "expected": "COMPLETE",
-                            "matcher": "path",
-                            "state": "success",
-                        },
-                        {
-                            "argument": "ProgressStatus",
-                            "expected": "FAILED",
-                            "matcher": "path",
-                            "state": "failure",
-                        },
-                    ],
-                }
-            },
-        }
-        registration_waiter = create_waiter_with_client(
-            "TypeRegistrationComplete", WaiterModel(waiter_config), cfn_client
-        )
-        # registration_waiter = cfn_client.get_waiter("TypeRegistrationComplete")
+        registration_waiter = cfn_client.get_waiter("type_registration_complete")
         try:
             LOG.warning(
                 "Successfully submitted type. "
