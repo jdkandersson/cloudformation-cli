@@ -68,7 +68,7 @@ def test_generate_string_strategy_regex():
     assert re.fullmatch(schema["pattern"], regex_strategy.example())
 
 
-@pytest.mark.parametrize("format_", ["arn"])
+@pytest.mark.parametrize("format_", ["arn", "date"])
 def test_generate_string_strategy_format(format_):
     schema = {"type": "string", "format": format_}
     strategy = ResourceGenerator(schema).generate_schema_strategy(schema)

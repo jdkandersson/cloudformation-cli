@@ -27,8 +27,10 @@ LOG = logging.getLogger(__name__)
 # https://github.com/aws-cloudformation/aws-cloudformation-rpdk/issues/118
 
 # Arn is just a placeholder for testing
+_DATE_REGEX = "\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])"
 STRING_FORMATS = {
-    "arn": "^arn:aws(-(cn|gov))?:[a-z-]+:(([a-z]+-)+[0-9])?:([0-9]{12})?:[^.]+$"
+    "arn": "^arn:aws(-(cn|gov))?:[a-z-]+:(([a-z]+-)+[0-9])?:([0-9]{12})?:[^.]+$",
+    "date": f"^{_DATE_REGEX}$",
 }
 
 NEG_INF = float("-inf")
